@@ -99,7 +99,7 @@ func getUsersBySection(client trainService.TrainServiceClient) {
 	for {
 		user, err := getUsersBySectionStream.Recv()
 		if user == nil {
-			log.Println("No bookings found in this section")
+			log.Printf("-----End of booking list for section: %v-----\n", section)
 		}
 		if err != nil {
 			break

@@ -10,29 +10,15 @@ import (
 	"google.golang.org/grpc"
 )
 
-type User struct {
-	FirstName string
-	LastName  string
-	Email     string
-}
-
-type Ticket struct {
-	From    string
-	To      string
-	User    User
-	Price   float32
-	Section string
-}
-
 type TrainServer struct {
 	*trainService.UnimplementedTrainServiceServer
-	tickets   []Ticket
+	tickets   []*trainService.Ticket
 	seatCount map[string]int
 }
 
 func main() {
 	server := &TrainServer{
-		tickets: []Ticket{},
+		tickets: []*trainService.Ticket{},
 		seatCount: map[string]int{
 			"A": 20,
 			"B": 20,
@@ -55,18 +41,7 @@ func main() {
 
 func (s *TrainServer) PurchaseTicket(ctx context.Context, req *trainService.Ticket) (*trainService.Ticket, error) {
 	if s.seatCount[req.Section] > 0 {
-		newTicket := Ticket{
-			From: req.From,
-			To:   req.To,
-			User: User{
-				FirstName: req.User.FirstName,
-				LastName:  req.User.LastName,
-				Email:     req.User.Email,
-			},
-			Price:   req.Price,
-			Section: req.Section,
-		}
-		s.tickets = append(s.tickets, newTicket)
+		s.tickets = append(s.tickets, req)
 		s.seatCount[req.Section]--
 		return req, nil
 	}
@@ -76,13 +51,7 @@ func (s *TrainServer) PurchaseTicket(ctx context.Context, req *trainService.Tick
 func (s *TrainServer) GetReceipt(ctx context.Context, req *trainService.User) (*trainService.Ticket, error) {
 	for _, ticket := range s.tickets {
 		if ticket.User.Email == req.Email {
-			return &trainService.Ticket{
-				From:    ticket.From,
-				To:      ticket.To,
-				User:    &trainService.User{FirstName: ticket.User.FirstName, LastName: ticket.User.LastName, Email: ticket.User.Email},
-				Price:   ticket.Price,
-				Section: ticket.Section,
-			}, nil
+			return ticket, nil
 		}
 	}
 	return nil, fmt.Errorf("ticket not found for user with email: %s", req.Email)
@@ -91,13 +60,7 @@ func (s *TrainServer) GetReceipt(ctx context.Context, req *trainService.User) (*
 func (s *TrainServer) GetUsersBySection(req *trainService.Ticket, stream trainService.TrainService_GetUsersBySectionServer) error {
 	for _, ticket := range s.tickets {
 		if ticket.Section == req.Section {
-			if err := stream.Send(&trainService.Ticket{
-				From:    ticket.From,
-				To:      ticket.To,
-				User:    &trainService.User{FirstName: ticket.User.FirstName, LastName: ticket.User.LastName, Email: ticket.User.Email},
-				Price:   ticket.Price,
-				Section: ticket.Section,
-			}); err != nil {
+			if err := stream.Send(ticket); err != nil {
 				return err
 			}
 		}
@@ -110,13 +73,7 @@ func (s *TrainServer) CancelTicket(ctx context.Context, req *trainService.User) 
 		if ticket.User.Email == req.Email {
 			s.tickets = append(s.tickets[:i], s.tickets[i+1:]...)
 			s.seatCount[ticket.Section]++
-			return &trainService.Ticket{
-				From:    ticket.From,
-				To:      ticket.To,
-				User:    &trainService.User{FirstName: ticket.User.FirstName, LastName: ticket.User.LastName, Email: ticket.User.Email},
-				Price:   ticket.Price,
-				Section: ticket.Section,
-			}, nil
+			return ticket, nil
 		}
 	}
 	return nil, fmt.Errorf("ticket not found for user with email: %s", req.Email)
@@ -126,13 +83,7 @@ func (s *TrainServer) ModifyUserSeat(ctx context.Context, req *trainService.Tick
 	for i, ticket := range s.tickets {
 		if ticket.User.Email == req.User.Email {
 			s.tickets[i].Section = req.Section
-			return &trainService.Ticket{
-				From:    ticket.From,
-				To:      ticket.To,
-				User:    &trainService.User{FirstName: ticket.User.FirstName, LastName: ticket.User.LastName, Email: ticket.User.Email},
-				Price:   ticket.Price,
-				Section: s.tickets[i].Section,
-			}, nil
+			return s.tickets[i], nil
 		}
 	}
 	return nil, fmt.Errorf("ticket not found for user with email: %s", req.User.Email)
