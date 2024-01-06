@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/iamir0nman/train/trainService"
+	"google.golang.org/grpc"
 )
 
 func TestPurchaseTicket(t *testing.T) {
@@ -202,6 +203,127 @@ func TestGetReceipt(t *testing.T) {
 			}
 			if !tc.expectedErr && resp != server.tickets[0] {
 				t.Errorf("Expected ticket: %v,\n got ticket: %v", server.tickets[0], resp)
+			}
+		})
+	}
+}
+
+func (m *mockStream) Send(ticket *trainService.Ticket) error {
+	m.data = append(m.data, ticket)
+	return nil
+}
+
+type mockStream struct {
+	data []*trainService.Ticket
+	grpc.ServerStream
+}
+
+func TestGetUsersBySection(t *testing.T) {
+	tests := []struct {
+		name         string
+		request      *trainService.Ticket
+		expectedResp []*trainService.Ticket
+		expectedErr  bool
+	}{
+		{
+			name:         "Invoke GetUsersBySection func with nil request",
+			request:      nil,
+			expectedResp: nil,
+			expectedErr:  true,
+		},
+		{
+			name:         "Empty section field in request",
+			request:      &trainService.Ticket{},
+			expectedResp: nil,
+			expectedErr:  true,
+		},
+		{
+			name:         "Invalid section in request",
+			request:      &trainService.Ticket{Section: "C"},
+			expectedResp: nil,
+			expectedErr:  true,
+		},
+		{
+			name:    "Valid section and streaming tickets",
+			request: &trainService.Ticket{Section: "A"},
+			expectedResp: []*trainService.Ticket{
+				{
+					From: "London",
+					To:   "Paris",
+					User: &trainService.User{
+						FirstName: "Deepak",
+						LastName:  "Kumar",
+						Email:     "deepak@example.com",
+					},
+					Price:   20,
+					Section: "A",
+				},
+				{
+					From: "London",
+					To:   "Paris",
+					User: &trainService.User{
+						FirstName: "Test",
+						LastName:  "User",
+						Email:     "testuser@example.com",
+					},
+					Price:   20,
+					Section: "A",
+				},
+			},
+			expectedErr: false,
+		},
+	}
+
+	server := &TrainServer{
+		tickets: []*trainService.Ticket{
+			{
+				From: "London",
+				To:   "Paris",
+				User: &trainService.User{
+					FirstName: "Deepak",
+					LastName:  "Kumar",
+					Email:     "deepak@example.com",
+				},
+				Price:   20,
+				Section: "A",
+			},
+			{
+				From: "London",
+				To:   "Paris",
+				User: &trainService.User{
+					FirstName: "Test",
+					LastName:  "User",
+					Email:     "testuser@example.com",
+				},
+				Price:   20,
+				Section: "A",
+			},
+		},
+		seatCount: map[string]int{
+			"A": 10,
+			"B": 10,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			mockStream := &mockStream{}
+			err := server.GetUsersBySection(tc.request, mockStream)
+
+			if tc.expectedErr && err == nil {
+				t.Error("Expected an error, got nil")
+			}
+			if !tc.expectedErr && err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+
+			if len(mockStream.data) != len(tc.expectedResp) {
+				t.Errorf("Expected %d tickets, got %d", len(tc.expectedResp), len(mockStream.data))
+			}
+			for i := range tc.expectedResp {
+				if tc.expectedResp[i] == mockStream.data[i] {
+					t.Errorf("Mismatch in streamed tickets. Expected: %v,\n got: %v", tc.expectedResp[i], mockStream.data[i])
+				}
 			}
 		})
 	}
