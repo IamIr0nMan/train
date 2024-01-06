@@ -72,3 +72,18 @@ func (s *TrainServer) PurchaseTicket(ctx context.Context, req *trainService.Tick
 	}
 	return nil, fmt.Errorf("no available seats in section %s", req.Section)
 }
+
+func (s *TrainServer) GetReceipt(ctx context.Context, req *trainService.User) (*trainService.Ticket, error) {
+	for _, ticket := range s.tickets {
+		if ticket.User.Email == req.Email {
+			return &trainService.Ticket{
+				From:    ticket.From,
+				To:      ticket.To,
+				User:    &trainService.User{FirstName: ticket.User.FirstName, LastName: ticket.User.LastName, Email: ticket.User.Email},
+				Price:   ticket.Price,
+				Section: ticket.Section,
+			}, nil
+		}
+	}
+	return nil, fmt.Errorf("ticket not found for user with email: %s", req.Email)
+}
