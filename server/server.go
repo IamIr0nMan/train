@@ -85,6 +85,9 @@ func (s *TrainServer) GetUsersBySection(req *trainService.Ticket, stream trainSe
 	if req.Section == "" {
 		return fmt.Errorf("section field is empty")
 	}
+	if req.Section != "A" && req.Section != "B" {
+		return fmt.Errorf("only sections A and B are allowed, given section: %v", req.Section)
+	}
 
 	for _, ticket := range s.tickets {
 		if ticket.Section == req.Section {
