@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"net"
 
@@ -49,4 +51,24 @@ func main() {
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
+}
+
+func (s *TrainServer) PurchaseTicket(ctx context.Context, req *trainService.Ticket) (*trainService.Ticket, error) {
+	if s.seatCount[req.Section] > 0 {
+		newTicket := Ticket{
+			From: req.From,
+			To:   req.To,
+			User: User{
+				FirstName: req.User.FirstName,
+				LastName:  req.User.LastName,
+				Email:     req.User.Email,
+			},
+			Price:   req.Price,
+			Section: req.Section,
+		}
+		s.tickets = append(s.tickets, newTicket)
+		s.seatCount[req.Section]--
+		return req, nil
+	}
+	return nil, fmt.Errorf("no available seats in section %s", req.Section)
 }
