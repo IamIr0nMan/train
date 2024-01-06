@@ -22,7 +22,6 @@ func main() {
 	client := trainService.NewTrainServiceClient(conn)
 
 	for {
-		log.Println("This is a log statement")
 		fmt.Println("Select an option:")
 		fmt.Println("1. Purchase Ticket")
 		fmt.Println("2. Get Reciept")
@@ -99,6 +98,9 @@ func getUsersBySection(client trainService.TrainServiceClient) {
 	}
 	for {
 		user, err := getUsersBySectionStream.Recv()
+		if user == nil {
+			log.Println("No bookings found in this section")
+		}
 		if err != nil {
 			break
 		}
