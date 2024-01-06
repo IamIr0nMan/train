@@ -121,6 +121,9 @@ func (s *TrainServer) ModifyUserSeat(ctx context.Context, req *trainService.Tick
 	if req == nil {
 		return nil, fmt.Errorf("request is nil")
 	}
+	if req.User == nil {
+		return nil, fmt.Errorf("user is not provided")
+	}
 	if req.User.Email == "" {
 		return nil, fmt.Errorf("email field is empty")
 	}

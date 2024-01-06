@@ -409,3 +409,101 @@ func TestCancelTicket(t *testing.T) {
 		})
 	}
 }
+
+func TestModifyUserSeat(t *testing.T) {
+	tests := []struct {
+		name         string
+		request      *trainService.Ticket
+		expectedResp *trainService.Ticket
+		expectedErr  bool
+	}{
+		{
+			name:         "Invoke ModifyUserSeat func with nil request",
+			request:      nil,
+			expectedResp: nil,
+			expectedErr:  true,
+		},
+		{
+			name:         "Empty email field in request",
+			request:      &trainService.Ticket{Section: "A"},
+			expectedResp: nil,
+			expectedErr:  true,
+		},
+		{
+			name: "Empty section field in request",
+			request: &trainService.Ticket{
+				User: &trainService.User{Email: "deepak@example.com"},
+			},
+			expectedResp: nil,
+			expectedErr:  true,
+		},
+		{
+			name: "Ticket not found",
+			request: &trainService.Ticket{
+				User: &trainService.User{
+					Email: "test@example.com",
+				},
+				Section: "C",
+			},
+			expectedResp: nil,
+			expectedErr:  true,
+		},
+		{
+			name: "Ticket found and cancelled",
+			request: &trainService.Ticket{
+				User: &trainService.User{
+					Email: "deepak@example.com",
+				},
+				Section: "A",
+			},
+			expectedResp: &trainService.Ticket{
+				From: "London",
+				To:   "Paris",
+				User: &trainService.User{
+					FirstName: "Deepak",
+					LastName:  "Kumar",
+					Email:     "deepak@example.com",
+				},
+				Price:   20,
+				Section: "A",
+			},
+			expectedErr: false,
+		},
+	}
+
+	server := &TrainServer{
+		tickets: []*trainService.Ticket{
+			{
+				From: "London",
+				To:   "Paris",
+				User: &trainService.User{
+					FirstName: "Deepak",
+					LastName:  "Kumar",
+					Email:     "deepak@example.com",
+				},
+				Price:   20,
+				Section: "A",
+			},
+		},
+		seatCount: map[string]int{
+			"A": 10,
+			"B": 10,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			resp, err := server.ModifyUserSeat(ctx, tc.request)
+
+			if tc.expectedErr && err == nil {
+				t.Error("Expected an error, got nil")
+			}
+			if !tc.expectedErr && err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+			if !tc.expectedErr && !reflect.DeepEqual(tc.expectedResp, resp) {
+				t.Errorf("Expected ticket: %v,\n got ticket: %v", tc.expectedResp, resp)
+			}
+		})
+	}
+}
