@@ -40,6 +40,20 @@ func main() {
 }
 
 func (s *TrainServer) PurchaseTicket(ctx context.Context, req *trainService.Ticket) (*trainService.Ticket, error) {
+	if req == nil {
+		return nil, fmt.Errorf("request is nil")
+	}
+	if req.From == "" || req.To == "" || req.Section == "" {
+		return nil, fmt.Errorf("(From, To, Section) fields are empty")
+	}
+
+	if req.User == nil {
+		return nil, fmt.Errorf("user info is missing")
+	}
+	if req.User.FirstName == "" || req.User.LastName == "" || req.User.Email == "" {
+		return nil, fmt.Errorf("(FirstName, LastName, Email) fields are empty")
+	}
+
 	if s.seatCount[req.Section] > 0 {
 		s.tickets = append(s.tickets, req)
 		s.seatCount[req.Section]--
@@ -49,6 +63,13 @@ func (s *TrainServer) PurchaseTicket(ctx context.Context, req *trainService.Tick
 }
 
 func (s *TrainServer) GetReceipt(ctx context.Context, req *trainService.User) (*trainService.Ticket, error) {
+	if req == nil {
+		return nil, fmt.Errorf("request is nil")
+	}
+	if req.Email == "" {
+		return nil, fmt.Errorf("email field is empty")
+	}
+
 	for _, ticket := range s.tickets {
 		if ticket.User.Email == req.Email {
 			return ticket, nil
@@ -58,6 +79,13 @@ func (s *TrainServer) GetReceipt(ctx context.Context, req *trainService.User) (*
 }
 
 func (s *TrainServer) GetUsersBySection(req *trainService.Ticket, stream trainService.TrainService_GetUsersBySectionServer) error {
+	if req == nil {
+		return fmt.Errorf("request is nil")
+	}
+	if req.Section == "" {
+		return fmt.Errorf("section field is empty")
+	}
+
 	for _, ticket := range s.tickets {
 		if ticket.Section == req.Section {
 			if err := stream.Send(ticket); err != nil {
@@ -69,6 +97,13 @@ func (s *TrainServer) GetUsersBySection(req *trainService.Ticket, stream trainSe
 }
 
 func (s *TrainServer) CancelTicket(ctx context.Context, req *trainService.User) (*trainService.Ticket, error) {
+	if req == nil {
+		return nil, fmt.Errorf("request is nil")
+	}
+	if req.Email == "" {
+		return nil, fmt.Errorf("email field is empty")
+	}
+
 	for i, ticket := range s.tickets {
 		if ticket.User.Email == req.Email {
 			s.tickets = append(s.tickets[:i], s.tickets[i+1:]...)
@@ -80,6 +115,16 @@ func (s *TrainServer) CancelTicket(ctx context.Context, req *trainService.User) 
 }
 
 func (s *TrainServer) ModifyUserSeat(ctx context.Context, req *trainService.Ticket) (*trainService.Ticket, error) {
+	if req == nil {
+		return nil, fmt.Errorf("request is nil")
+	}
+	if req.User.Email == "" {
+		return nil, fmt.Errorf("email field is empty")
+	}
+	if req.Section == "" {
+		return nil, fmt.Errorf("section field is empty")
+	}
+
 	for i, ticket := range s.tickets {
 		if ticket.User.Email == req.User.Email {
 			s.tickets[i].Section = req.Section
