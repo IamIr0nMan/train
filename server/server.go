@@ -121,3 +121,19 @@ func (s *TrainServer) CancelTicket(ctx context.Context, req *trainService.User) 
 	}
 	return nil, fmt.Errorf("ticket not found for user with email: %s", req.Email)
 }
+
+func (s *TrainServer) ModifyUserSeat(ctx context.Context, req *trainService.Ticket) (*trainService.Ticket, error) {
+	for i, ticket := range s.tickets {
+		if ticket.User.Email == req.User.Email {
+			s.tickets[i].Section = req.Section
+			return &trainService.Ticket{
+				From:    ticket.From,
+				To:      ticket.To,
+				User:    &trainService.User{FirstName: ticket.User.FirstName, LastName: ticket.User.LastName, Email: ticket.User.Email},
+				Price:   ticket.Price,
+				Section: s.tickets[i].Section,
+			}, nil
+		}
+	}
+	return nil, fmt.Errorf("ticket not found for user with email: %s", req.User.Email)
+}
