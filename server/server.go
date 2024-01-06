@@ -87,3 +87,20 @@ func (s *TrainServer) GetReceipt(ctx context.Context, req *trainService.User) (*
 	}
 	return nil, fmt.Errorf("ticket not found for user with email: %s", req.Email)
 }
+
+func (s *TrainServer) GetUsersBySection(req *trainService.Ticket, stream trainService.TrainService_GetUsersBySectionServer) error {
+	for _, ticket := range s.tickets {
+		if ticket.Section == req.Section {
+			if err := stream.Send(&trainService.Ticket{
+				From:    ticket.From,
+				To:      ticket.To,
+				User:    &trainService.User{FirstName: ticket.User.FirstName, LastName: ticket.User.LastName, Email: ticket.User.Email},
+				Price:   ticket.Price,
+				Section: ticket.Section,
+			}); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
